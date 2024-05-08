@@ -1,0 +1,290 @@
+---
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content="{Astro.generator}" />
+    <title>Drag and Drop - Kanban - Astro</title>
+  </head>
+  <body class="flex flex-col items-center justify-center min-h-screen">
+    <header class="flex items-center justify-center">
+      <h1 class="text-center text-4xl text-gray-700 font-semibold">
+        Drag & Drop
+        <br />
+        <span class="block text-2xl text-gray-500">Lean Kanban Board</span>
+      </h1>
+    </header>
+
+    <div
+      class="container mx-auto flex items-center justify-center py-5 w-full space-x-3"
+    >
+      <input
+        type="text"
+        maxlength="12"
+        id="taskText"
+        placeholder="New Task..."
+        onkeydown="if (event.keyCode == 13)
+                document.getElementById('add').click()"
+        class="shadow appearance-none border rounded flex-grow py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+      />
+      <button
+        id="add"
+        onclick="addTask()"
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex-shrink-0"
+      >
+        Add New Task
+      </button>
+    </div>
+
+    <div class="container mx-auto grid grid-cols-4 gap-4">
+      <div class="col-span-1 bg-gray-200 p-4 rounded bg-orange-400">
+        <h4 class="font-bold mb-4 text-center">To Do</h4>
+        <ul id="to-do" class="space-y-4">
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="Analysis"
+          >
+            <p>Analysis</p>
+          </li>
+          <li class="bg-white p-4 rounded shadow" draggable="true" id="Coding">
+            <p>Coding</p>
+          </li>
+        </ul>
+      </div>
+
+      <div class="col-span-1 bg-gray-200 p-4 rounded bg-blue-400">
+        <h4 class="font-bold mb-4 text-center">Doing</h4>
+        <ul id="doing" class="space-y-4">
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="Hypothesis"
+          >
+            <p>Hypothesis</p>
+          </li>
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="user-testing"
+          >
+            <p>User Testing</p>
+          </li>
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="prototype"
+          >
+            <p>Prototype</p>
+          </li>
+        </ul>
+      </div>
+
+      <div class="col-span-1 bg-gray-200 p-4 rounded bg-green-400">
+        <h4 class="font-bold mb-4 text-center">Done</h4>
+        <ul id="done" class="space-y-4">
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="ideation"
+          >
+            <p>Ideation</p>
+          </li>
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="sketches"
+          >
+            <p>Sketches</p>
+          </li>
+        </ul>
+      </div>
+
+      <div class="col-span-1 bg-gray-200 p-4 rounded bg-red-400">
+        <h4 class="font-bold mb-4 text-center">Trash</h4>
+        <ul id="trash" class="space-y-4">
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="interviews	"
+          >
+            <p>Interviews</p>
+          </li>
+          <li
+            class="bg-white p-4 rounded shadow"
+            draggable="true"
+            id="research"
+          >
+            <p>Research</p>
+          </li>
+        </ul>
+        <button
+          class="mt-4 w-full bg-red-500 text-white p-2 rounded"
+          onclick="emptyTrash()"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <footer></footer>
+    <script is:inline>
+      // Load tasks from localStorage on page load
+      window.onload = function () {
+        const tasks = JSON.parse(localStorage.getItem("tasks"));
+        if (tasks) {
+          const columns = document.querySelectorAll(".col-span-1");
+          columns.forEach((column, index) => {
+            // Clear the column before adding tasks
+            column.querySelector("ul").innerHTML = "";
+            tasks[index].forEach((taskObj) => {
+              // Create a new li element
+              const newTask = document.createElement("li");
+              newTask.setAttribute("class", "bg-white p-4 rounded shadow");
+              newTask.setAttribute("draggable", "true");
+              newTask.setAttribute("id", taskObj.id);
+
+              // Create a new p element
+              const newTaskText = document.createElement("p");
+              newTaskText.textContent = taskObj.text;
+
+              // Append the p element to the li element
+              newTask.appendChild(newTaskText);
+
+              // Add the dragstart event listener to the new task
+              newTask.addEventListener("dragstart", handleDragStart);
+
+              // Append the new task to the column
+              column.querySelector("ul").appendChild(newTask);
+            });
+          });
+        }
+      };
+
+      // Select all the task and column elements
+      const tasks = document.querySelectorAll("li[draggable='true']");
+      const columns = document.querySelectorAll(".col-span-1");
+
+      // Add the event listeners to the task elements
+      tasks.forEach((task) => {
+        task.addEventListener("dragstart", handleDragStart);
+      });
+
+      // Add the event listeners to the column elements
+      columns.forEach((column) => {
+        column.addEventListener("dragover", handleDragOver);
+        column.addEventListener("dragleave", handleDragLeave);
+        column.addEventListener("drop", handleDrop);
+      });
+
+      function handleDragStart(e) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", e.target.id);
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.classList.add("active-drop");
+      }
+
+      function handleDragLeave(e) {
+        e.currentTarget.classList.remove("active-drop");
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove("active-drop");
+
+        const id = e.dataTransfer.getData("text/plain");
+        const draggableElement = document.getElementById(id);
+        const dropzone = e.currentTarget.querySelector("ul");
+
+        dropzone.appendChild(draggableElement);
+
+        e.dataTransfer.clearData();
+
+        // Save tasks to localStorage after each drop
+        const columns = document.querySelectorAll(".col-span-1");
+        const tasks = Array.from(columns).map((column) =>
+          Array.from(column.querySelectorAll("li[draggable='true']")).map(
+            (task) => ({ id: task.id, text: task.textContent }),
+          ),
+        );
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }
+
+      function addTask() {
+        // Get the task text from the input field
+        const taskText = document.getElementById("taskText").value;
+
+        // Create a new li element
+        const newTask = document.createElement("li");
+        newTask.setAttribute("class", "bg-white p-4 rounded shadow");
+        newTask.setAttribute("draggable", "true");
+        newTask.setAttribute("id", taskText); // Set the id to the task text for simplicity
+
+        // Create a new p element
+        const newTaskText = document.createElement("p");
+        newTaskText.textContent = taskText;
+
+        // Append the p element to the li element
+        newTask.appendChild(newTaskText);
+
+        // Add the dragstart event listener to the new task
+        newTask.addEventListener("dragstart", handleDragStart);
+
+        // Append the new task to the "To Do" column
+        const toDoColumn = document.querySelector("#to-do");
+        toDoColumn.appendChild(newTask);
+
+        // Clear the input field
+        document.getElementById("taskText").value = "";
+
+        // Save tasks to localStorage
+        const columns = document.querySelectorAll(".col-span-1");
+        const tasks = Array.from(columns).map((column) =>
+          Array.from(column.querySelectorAll("li[draggable='true']")).map(
+            (task) => ({ id: task.id, text: task.textContent }),
+          ),
+        );
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }
+      function emptyTrash() {
+        // Confirm the action with the user
+        if (
+          !window.confirm(
+            "Are you sure you want to delete all tasks in the trash?",
+          )
+        ) {
+          return;
+        }
+
+        // Get the trash ul
+        const trash = document.querySelector("#trash");
+
+        // Remove all tasks from the trash ul
+        while (trash.firstChild) {
+          trash.removeChild(trash.firstChild);
+        }
+
+        // Remove the tasks from localStorage
+        const tasks = JSON.parse(localStorage.getItem("tasks"));
+        const updatedTasks = tasks.map((columnTasks, index) => {
+          if (index === tasks.length - 1) {
+            // Assuming the trash column is the last one
+            return [];
+          }
+          return columnTasks;
+        });
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+
+        alert("All tasks in the trash have been deleted.");
+      }
+    </script>
+  </body>
+</html>
